@@ -133,10 +133,10 @@ The sparsity patern is shown below:
 
 #### Training of the GNP
 
-Training has been performed on the linear system for 2000 epochs. Below details about the training are shown:
+Training has been performed on the linear system for 4000 epochs. Below details about the training are shown:
 
 - Training time: **24 minutes**
-- Minimum loss: **6.5 × 10⁻⁴**
+- Minimum loss: **4.2 × 10⁻⁴**
 
 ![Training Convergence](static/60k_x_60k_matrix_training.png)
 

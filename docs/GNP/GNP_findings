@@ -1,0 +1,164 @@
+# Using Graph Neural Networks as a Preconditioner (GNP) in Soil–Structure Interaction
+
+## Why
+
+Soil–structure interaction problems are commonly solved using the Finite Element Method (FEM). These problems often involve large variations in stiffness across the domain, leading to stiffness matrices with high condition numbers. This makes the system harder to solve numerically, as matrix inversion (or iterative convergence) becomes more computationally expensive.
+
+To address this, preconditioners are typically used to reduce the condition number and improve solver performance.
+
+## Preconditioners
+
+Finite element systems are typically written as:
+
+$
+Ax = b
+$
+
+For large systems, solving this directly can be computationally expensive. Preconditioners approximate $A^{-1}$ to improve convergence speed and reduce computational effort.
+
+In this work, a **Graph Neural Network Preconditioner (GNP)** is used to approximate $A^{-1}$.
+
+## Method
+
+Two finite element linear systems are evaluated:
+
+- One with a **low condition number**
+- One with a **high condition number**
+
+Performance is measured using:
+
+- Number of iterations until convergence
+- Total computation time
+
+The following cases are compared:
+
+- No preconditioner
+- Jacobi preconditioner
+- Graph Neural Network Preconditioner (GNP)
+
+GNP has been evaluated using different input settings, yielding varying results. This document presents representative results in order to draw conclusions about the performance of the methodology.
+
+### Finite Element System
+
+The following systems are solved:
+
+- Without preconditioning:
+
+$
+Ax = b
+$
+
+- With preconditioning:
+
+$
+M^{-1}Ax = M^{-1}b
+$
+
+where $M$ is the preconditioner.
+
+### Linear Solver
+
+The **Conjugate Gradient (CG)** method is used to solve the system. CG is an iterative solver well-suited for large, symmetric, positive definite matrices.
+
+Convergence is assumed to be achieved when the residual is less than $10^{-12}$. If convergece is not achieved after 1000 iterations, CG is terminated.
+
+### Jacobi Preconditioner
+
+The Jacobi preconditioner is simple but often effective in soil–structure interaction problems.
+
+$
+M = D
+$
+
+where $D$ is the diagonal of matrix $A$.
+
+### Graph Neural Network Preconditioner (GNP)
+
+The GNP constructs the preconditioner $M$ using a **Graph Convolutional Network (GCN)**. The training data consists of $(b, x)$ pairs and the model learns the mapping:
+
+$
+Mb \rightarrow x
+$
+
+A full description of the method can be found in @@ref@@.
+
+### Specs
+
+The training of GNP and the solving of the linear systems with CG are largely performed on the GPU, where in these analysis, the following GPU has been used:
+
+- NVIDIA RTX A1000 6GB Laptop GPU
+
+## Results
+
+### Case 1
+
+The first case consists of a sparse matrix with the properties:
+
+- Matrix size: **3509 × 3509**
+- Non-zero entries: **226,049**
+- 1-norm condition number: **901**
+
+The sparsity patern is shown below:
+
+![Sparsity Pattern](static/3_5k_x_3_5k_matrix_sparsity.png)
+
+#### Training of the GNP
+
+Training has been performed on the linear system for 2000 epochs. Below details about the training are shown:
+
+- Training time: **71 seconds**
+- Minimum loss: **8.5e-3**
+
+![Training Convergence](static/3_5k_x_3_5k_matrix_training.png)
+
+#### Performance
+
+Below figures are shown of the number of iterations until the linear system is converged. And of the time it took until convergence. It can be seen that convergence with GNP took significantly less iterations, however computation time is greater than the cases without preconditioner and with the jacobi preconditioner.
+
+![Iterations](static/3_5k_x_3_5k_matrix_solver.png)
+
+![Time](static/3_5k_x_3_5k_matrix_time.png)
+
+### Case 2
+
+The second case consists of a sparse matrix with the properties:
+
+- Matrix size: **60,468 × 60,468**
+- Non-zero entries: **2,431,934**
+- Estimated 1-norm condition number: **2.6 × 10⁹**
+
+The sparsity patern is shown below:
+
+![Sparsity Pattern](static/60k_x_60k_matrix_sparsity.png)
+
+#### Training of the GNP
+
+Training has been performed on the linear system for 4000 epochs. Below details about the training are shown:
+
+- Training time: **24 minutes**
+- Minimum loss: **4.2 × 10⁻⁴**
+
+![Training Convergence](static/60k_x_60k_matrix_training.png)
+
+#### Performance
+
+Below figures are shown of the number of iterations until the linear system is converged. And of the time it took until convergence.
+
+It can be seen that convergence has not been achieved after 1000 iterations with GNP. Even the case where no preconditioner is used, converges further than the case with GNP. Using the jacobi preconditioner, significantly improves the convergence rate in terms of iterations, while not adding significant more computational effort per iteration
+
+![Iterations](static/60k_x_60k_matrix_solver.png)
+
+![Time](static/60k_x_60k_matrix_time.png)
+
+## Conclusion
+
+- Training time in both cases is far greater than solving the linear system.
+
+- For **small matrices with low condition numbers**:
+  - GNP reduces iteration count after training.
+  - However, due to its simplicity, the Jacobi preconditioner remains faster overall.
+
+- For **large matrices with high condition numbers**:
+  - GNP does not improve convergence compared to no preconditioner.
+
+Given the fact that GNP has to be trained seperately for each new matrix, which is time consuming. And that a trained GNP does not outperform the Jacobi preconditioner in terms of time, **There is no clear benefit in using GNP for soil–structure interaction problems.**
